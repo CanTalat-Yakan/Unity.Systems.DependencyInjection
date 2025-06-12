@@ -128,9 +128,7 @@ namespace UnityEssentials
                 var propertyType = injectableProperty.PropertyType;
                 var resolvedInstance = Resolve(propertyType);
                 if (resolvedInstance == null)
-                {
                     throw new Exception($"Failed to inject dependency into property '{injectableProperty.Name}' of class '{type.Name}'.");
-                }
 
                 injectableProperty.SetValue(instance, resolvedInstance);
             }
