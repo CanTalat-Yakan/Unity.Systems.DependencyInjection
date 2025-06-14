@@ -14,7 +14,7 @@ namespace UnityEssentials
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class ProvideAttribute : PropertyAttribute { }
 
-    public static class Injector
+    public static class DependencyInjector
     {
         private static readonly BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private static readonly Dictionary<Type, object> s_registry = new();
