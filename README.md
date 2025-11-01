@@ -51,7 +51,7 @@ Dependencies are discovered at startup from provider components and written into
   - Small runtime .asmdef, no third‑party DI framework required
 
 ## Requirements
-- Unity 6000.0+ (per package manifest)
+- Unity 6000.0+
 - Add provider and consumer MonoBehaviours to your scene(s)
 - Public or non‑public members can be injected; attributes are discovered via reflection
 
