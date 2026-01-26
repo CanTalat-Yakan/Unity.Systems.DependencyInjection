@@ -14,15 +14,15 @@ namespace UnityEssentials
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class ProvideAttribute : PropertyAttribute { }
 
-    public static class DependencyInjector
+    public static class DependencyInjection
     {
-        private static readonly BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        private static readonly BindingFlags s_bindingFlags = RuntimeDiscovery.InstanceMembers;
         private static readonly Dictionary<Type, object> s_registry = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void OnAwake()
         {
-            var monoBehaviours = FindMonoBehaviours();
+            var monoBehaviours = RuntimeDiscovery.FindAllMonoBehaviours();
 
             // Find all modules implementing IDependencyProvider and register the dependencies they provide
             var providers = monoBehaviours.OfType<IDependencyProvider>();
@@ -40,13 +40,13 @@ namespace UnityEssentials
 
         public static void ValidateDependencies()
         {
-            var monoBehaviours = FindMonoBehaviours();
+            var monoBehaviours = RuntimeDiscovery.FindAllMonoBehaviours();
             var providers = monoBehaviours.OfType<IDependencyProvider>();
             var providedDependencies = GetProvidedDependencies(providers);
 
             var invalidDependencies = monoBehaviours
                 .SelectMany(mb => mb.GetType().GetFields(s_bindingFlags), (mb, field) => new { mb, field })
-                .Where(t => Attribute.IsDefined(t.field, typeof(InjectAttribute)))
+                .Where(t => RuntimeDiscovery.HasAttribute(t.field, typeof(InjectAttribute), inherit: true))
                 .Where(t => !providedDependencies.Contains(t.field.FieldType) && t.field.GetValue(t.mb) == null)
                 .Select(t => $"[Validation] {t.mb.GetType().Name} is missing dependency {t.field.FieldType.Name} on GameObject {t.mb.gameObject.name}");
 
@@ -67,11 +67,11 @@ namespace UnityEssentials
 
         public static void ClearDependencies()
         {
-            foreach (var monoBehaviour in FindMonoBehaviours())
+            foreach (var monoBehaviour in RuntimeDiscovery.FindAllMonoBehaviours())
             {
                 var type = monoBehaviour.GetType();
                 var injectableFields = type.GetFields(s_bindingFlags)
-                    .Where(member => Attribute.IsDefined(member, typeof(InjectAttribute)));
+                    .Where(member => RuntimeDiscovery.HasAttribute(member, typeof(InjectAttribute), inherit: true));
 
                 foreach (var injectableField in injectableFields)
                     injectableField.SetValue(monoBehaviour, null);
@@ -86,7 +86,7 @@ namespace UnityEssentials
 
             // Inject into fields
             var injectableFields = type.GetFields(s_bindingFlags)
-                .Where(member => Attribute.IsDefined(member, typeof(InjectAttribute)));
+                .Where(member => RuntimeDiscovery.HasAttribute(member, typeof(InjectAttribute), inherit: true));
 
             foreach (var injectableField in injectableFields)
             {
@@ -106,13 +106,14 @@ namespace UnityEssentials
 
             // Inject into methods
             var injectableMethods = type.GetMethods(s_bindingFlags)
-                .Where(member => Attribute.IsDefined(member, typeof(InjectAttribute)));
+                .Where(member => RuntimeDiscovery.HasAttribute(member, typeof(InjectAttribute), inherit: true));
 
             foreach (var injectableMethod in injectableMethods)
             {
                 var requiredParameters = injectableMethod.GetParameters()
                     .Select(parameter => parameter.ParameterType)
                     .ToArray();
+
                 var resolvedInstances = requiredParameters.Select(Resolve).ToArray();
                 if (resolvedInstances.Any(resolvedInstance => resolvedInstance == null))
                     throw new Exception($"Failed to inject dependencies into method '{injectableMethod.Name}' of class '{type.Name}'.");
@@ -122,7 +123,8 @@ namespace UnityEssentials
 
             // Inject into properties
             var injectableProperties = type.GetProperties(s_bindingFlags)
-                .Where(member => Attribute.IsDefined(member, typeof(InjectAttribute)));
+                .Where(member => RuntimeDiscovery.HasAttribute(member, typeof(InjectAttribute), inherit: true));
+
             foreach (var injectableProperty in injectableProperties)
             {
                 var propertyType = injectableProperty.PropertyType;
@@ -140,14 +142,17 @@ namespace UnityEssentials
 
             foreach (var method in methods)
             {
-                if (!Attribute.IsDefined(method, typeof(ProvideAttribute)))
+                if (!RuntimeDiscovery.HasAttribute(method, typeof(ProvideAttribute), inherit: true))
                     continue;
 
                 var returnType = method.ReturnType;
                 var providedInstance = method.Invoke(provider, null);
-                if (providedInstance != null)
-                    s_registry.Add(returnType, providedInstance);
-                else throw new Exception($"Provider method '{method.Name}' in class '{provider.GetType().Name}' returned null when providing type '{returnType.Name}'.");
+
+                if (providedInstance == null)
+                    throw new Exception($"Provider method '{method.Name}' in class '{provider.GetType().Name}' returned null when providing type '{returnType.Name}'.");
+
+                // Allow override semantics (last provider wins) rather than throwing on duplicates.
+                s_registry[returnType] = providedInstance;
             }
         }
 
@@ -157,13 +162,13 @@ namespace UnityEssentials
             foreach (var provider in providers)
             {
                 var methods = provider.GetType().GetMethods(s_bindingFlags);
-
-                foreach (var method in methods)
+                for (var i = 0; i < methods.Length; i++)
                 {
-                    if (!Attribute.IsDefined(method, typeof(ProvideAttribute))) continue;
+                    var method = methods[i];
+                    if (!RuntimeDiscovery.HasAttribute(method, typeof(ProvideAttribute), inherit: true))
+                        continue;
 
-                    var returnType = method.ReturnType;
-                    providedDependencies.Add(returnType);
+                    providedDependencies.Add(method.ReturnType);
                 }
             }
 
@@ -176,13 +181,14 @@ namespace UnityEssentials
             return resolvedInstance;
         }
 
-        private static MonoBehaviour[] FindMonoBehaviours() =>
-            UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.InstanceID);
-
         private static bool IsInjectable(MonoBehaviour obj)
         {
             var members = obj.GetType().GetMembers(s_bindingFlags);
-            return members.Any(member => Attribute.IsDefined(member, typeof(InjectAttribute)));
+            for (var i = 0; i < members.Length; i++)
+                if (RuntimeDiscovery.HasAttribute(members[i], typeof(InjectAttribute), inherit: true))
+                    return true;
+
+            return false;
         }
     }
 }

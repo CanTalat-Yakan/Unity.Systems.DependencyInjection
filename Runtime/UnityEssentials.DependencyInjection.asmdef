@@ -5,7 +5,7 @@
     "overrideReferences": false,
     "autoReferenced": true,
     "rootNamespace": "UnityEssentials",
-    "references": [],
+    "references": ["GUID:dec8fc344c4ac65a382ccf61a3d320fc"],
     "precompiledReferences": [],
     "includePlatforms": [],
     "excludePlatforms": [],
