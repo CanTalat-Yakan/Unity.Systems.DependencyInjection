@@ -2,7 +2,8 @@
     "name": "UnityEssentials.DependencyInjection.Examples",
     "rootNamespace": "UnityEssentials",
     "references": [
-        "GUID:59aa5227abf41b048b714a7feacf0d98"
+        "GUID:59aa5227abf41b048b714a7feacf0d98",
+        "GUID:dec8fc344c4ac65a382ccf61a3d320fc"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
