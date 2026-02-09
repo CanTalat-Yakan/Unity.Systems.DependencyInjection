@@ -22,7 +22,7 @@ namespace UnityEssentials
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void OnAwake()
         {
-            var monoBehaviours = RuntimeDiscovery.FindAllMonoBehaviours();
+            var monoBehaviours = RuntimeDiscovery.AllMonoBehavioursCached;
 
             // Find all modules implementing IDependencyProvider and register the dependencies they provide
             var providers = monoBehaviours.OfType<IDependencyProvider>();
@@ -40,7 +40,7 @@ namespace UnityEssentials
 
         public static void ValidateDependencies()
         {
-            var monoBehaviours = RuntimeDiscovery.FindAllMonoBehaviours();
+            var monoBehaviours = RuntimeDiscovery.AllMonoBehavioursCached;
             var providers = monoBehaviours.OfType<IDependencyProvider>();
             var providedDependencies = GetProvidedDependencies(providers);
 
@@ -67,7 +67,8 @@ namespace UnityEssentials
 
         public static void ClearDependencies()
         {
-            foreach (var monoBehaviour in RuntimeDiscovery.FindAllMonoBehaviours())
+            var monoBehaviours = RuntimeDiscovery.AllMonoBehavioursCached;
+            foreach (var monoBehaviour in monoBehaviours)
             {
                 var type = monoBehaviour.GetType();
                 var injectableFields = type.GetFields(s_bindingFlags)
