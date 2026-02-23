@@ -1,0 +1,16 @@
+{
+    "name": "UnityEssentials.Systems.DependencyInjection",
+    "rootNamespace": "UnityEssentials",
+    "references": [
+        "GUID:dec8fc344c4ac65a382ccf61a3d320fc"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
